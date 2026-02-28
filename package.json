@@ -1,8 +1,10 @@
 {
   "name": "tg-appointment-app",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
+  "homepage": "https://sienkiewicz-dom.vercel.app/",
+  "description": "Telegram Web App booking form for Sienkiewicz Dom",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
