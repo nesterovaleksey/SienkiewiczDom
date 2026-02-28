@@ -1,0 +1,585 @@
+:root {
+  /* Переменные темы Telegram (нативные цвета) */
+  --bg-color: var(--tg-theme-bg-color, #ffffff);
+  --text-color: var(--tg-theme-text-color, #000000);
+  --hint-color: var(--tg-theme-hint-color, #999999);
+  --link-color: var(--tg-theme-link-color, #2481cc);
+  --button-color: var(--tg-theme-button-color, #2481cc);
+  --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+  --secondary-bg-color: var(--tg-theme-secondary-bg-color, #f0f2f5);
+
+  /* Дополнительные TWA цвета (появились в новых версиях API) */
+  --section-bg-color: var(--tg-theme-section-bg-color, #ffffff);
+  --section-header-text-color: var(--tg-theme-section-header-text-color, #2481cc);
+
+  /* Радиусы скругления в стиле iOS/Telegram */
+  --radius-md: 12px;
+  --radius-lg: 16px;
+}
+
+/* Применение темной темы для fallback, если TWA переменные не отработали так как надо на десктопе, 
+   но обычно TWA API пробрасывает цвета корректно */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --secondary-bg-color: var(--tg-theme-secondary-bg-color, #1c1c1d);
+    --section-bg-color: var(--tg-theme-section-bg-color, #1c1c1d);
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* Запрет выделения текста для ощущения "нативного" приложения */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--secondary-bg-color);
+  color: var(--text-color);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-in {
+  animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.delay-1 {
+  animation-delay: 0.05s;
+}
+
+.delay-2 {
+  animation-delay: 0.1s;
+}
+
+.delay-3 {
+  animation-delay: 0.15s;
+}
+
+.delay-4 {
+  animation-delay: 0.2s;
+}
+
+#app {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Headers */
+.header {
+  margin-bottom: 24px;
+  padding: 8px 4px;
+}
+
+.welcome-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding-bottom: 15vh;
+  /* Немного приподнимаем над абсолютным центром */
+  width: 100%;
+}
+
+.welcome-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(36, 129, 204, 0.1);
+  /* Легкий синий фон под иконку */
+  border-radius: 20px;
+  /* Красивое скругление как в iOS */
+  font-size: 40px;
+  animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  color: var(--button-color);
+}
+
+.welcome-header {
+  text-align: center;
+  width: 100%;
+  margin-bottom: 32px;
+}
+
+h1 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 6px;
+}
+
+p.subtitle {
+  color: var(--hint-color);
+  font-size: 15px;
+}
+
+/* Cards (Нативный стиль кнопок-списков Telegram/iOS) */
+.services-list {
+  background-color: var(--section-bg-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  /* Немного тени для светлой темы, в темной не видно */
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background-color: var(--section-bg-color);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 60px;
+  /* Отступ под иконку */
+  right: 0;
+  height: 1px;
+  background-color: var(--hint-color);
+  opacity: 0.2;
+}
+
+.card:active {
+  background-color: var(--secondary-bg-color);
+  transform: scale(0.98);
+}
+
+.card-icon {
+  font-size: 28px;
+  margin-right: 16px;
+  width: 36px;
+  text-align: center;
+}
+
+.card-content {
+  flex-grow: 1;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--text-color);
+}
+
+.card-subtitle {
+  color: var(--hint-color);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.card-action {
+  color: var(--link-color);
+  font-weight: 500;
+  font-size: 15px;
+}
+
+/* Slots Grid */
+.slots-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 30px;
+}
+
+.slot-card {
+  background-color: var(--section-bg-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.slot-card::after {
+  display: none;
+  /* Убираем полосу как в списке сервисов */
+}
+
+.slot-card.selected {
+  border-color: var(--button-color);
+  background-color: var(--secondary-bg-color);
+}
+
+.slot-card .card-title {
+  font-size: 16px;
+}
+
+.radio-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--hint-color);
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.slot-card.selected .radio-circle {
+  border-color: var(--button-color);
+  opacity: 1;
+}
+
+.slot-card.selected .radio-circle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  background-color: var(--button-color);
+  border-radius: 50%;
+}
+
+/* Loaders and Empty States */
+.slots-loading,
+.empty-state,
+.error-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--hint-color);
+}
+
+.loader {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--secondary-bg-color);
+  border-top-color: var(--button-color);
+  border-radius: 50%;
+  animation: spinner 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Buttons */
+.btn {
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  width: 100%;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.btn:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background-color: var(--button-color);
+  color: var(--button-text-color);
+}
+
+.btn-secondary {
+  background-color: var(--section-bg-color);
+  color: var(--text-color);
+}
+
+/* Success View */
+.success-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-grow: 1;
+  text-align: center;
+  padding-bottom: 40px;
+}
+
+.success-icon {
+  margin-bottom: 24px;
+  width: 80px;
+  height: 80px;
+  animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.success-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.success-view h1 {
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+/* ========================================= */
+/* Calendar Styles                           */
+/* ========================================= */
+.calendar-container {
+  background-color: var(--section-bg-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.calendar-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.calendar-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: var(--link-color);
+  cursor: pointer;
+  padding: 4px 12px;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: 500;
+  color: var(--hint-color);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.calendar-day.empty {
+  visibility: hidden;
+}
+
+.calendar-day.disabled {
+  color: var(--hint-color);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.calendar-day.has-slots {
+  background-color: var(--secondary-bg-color);
+  color: var(--link-color);
+  font-weight: 500;
+}
+
+.calendar-day.has-slots:active {
+  background-color: rgba(36, 129, 204, 0.2);
+}
+
+.calendar-day.today {
+  border: 1px solid var(--button-color);
+}
+
+.calendar-day.selected {
+  background-color: var(--button-color);
+  color: var(--button-text-color);
+  font-weight: 600;
+}
+
+/* ========================================= */
+/* Form Styles                               */
+/* ========================================= */
+.form-container {
+  background-color: var(--section-bg-color);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--hint-color);
+  padding-left: 4px;
+}
+
+.input-field {
+  background-color: var(--secondary-bg-color);
+  color: var(--text-color);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  font-size: 16px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: var(--button-color);
+  background-color: var(--bg-color);
+}
+
+.input-field::placeholder {
+  color: var(--hint-color);
+  opacity: 0.6;
+}
+
+/* ========================================= */
+/* Buttons Fallback (Web)                     */
+/* ========================================= */
+.btn {
+  background-color: var(--button-color);
+  color: var(--button-text-color);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: scale(1);
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  color: var(--button-color);
+  font-size: 16px;
+  min-width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0;
+  margin-right: 8px;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.back-btn:active {
+  opacity: 0.6;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+}
+
+/* ========================================= */
+/* Loader                                    */
+/* ========================================= */
+.loader-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 0;
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+.loader {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--hint-color);
+  border-bottom-color: var(--button-color);
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}

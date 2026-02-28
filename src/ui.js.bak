@@ -1,0 +1,479 @@
+import { fetchSlots, bookSlot } from './api.js';
+
+export function setupUI(twa, userId) {
+  const app = document.querySelector('#app');
+  renderServiceSelection(app, twa, userId);
+}
+
+function formatDuration(minutes) {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (remainingMinutes === 0) {
+    return `${hours} ч.`;
+  }
+  return `${hours} ч. ${remainingMinutes} мин.`;
+}
+
+// ----------------------------------------------------
+// ЭКРАН 1: ВЫБОР УСЛУГИ
+// ----------------------------------------------------
+function renderServiceSelection(app, twa, userId) {
+  if (twa.BackButton) twa.BackButton.hide();
+  if (twa.MainButton) twa.MainButton.hide();
+
+  app.innerHTML = `
+    <div class="welcome-container">
+      <div class="welcome-icon">
+        <!-- SVG Иконка календаря/записи -->
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 44px; height: 44px;">
+          <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M16 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 2V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 10H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div class="header welcome-header animate-in">
+        <h1>Выбор услуги</h1>
+        <p class="subtitle">Что вы хотите запланировать?</p>
+      </div>
+      
+      <div class="services-list animate-in delay-1" style="width: 100%; max-width: 400px;">
+        <div class="card" id="btn-call">
+          <div class="card-icon">📞</div>
+          <div class="card-content">
+            <div class="card-title">Звонок (1 час)</div>
+            <div class="card-subtitle">Обсуждение рабочих вопросов</div>
+          </div>
+          <div class="card-action" style="font-weight: 500; color: var(--button-color); font-size: 15px;">Выбрать</div>
+        </div>
+        
+        <div class="card" id="btn-meeting">
+          <div class="card-icon">🤝</div>
+          <div class="card-content">
+            <div class="card-title">Встреча (2 часа)</div>
+            <div class="card-subtitle">Встреча с сотрудником</div>
+          </div>
+          <div class="card-action" style="font-weight: 500; color: var(--button-color); font-size: 15px;">Выбрать</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-call').addEventListener('click', () => {
+    // Текущий месяц в виде объекта Date (первое число)
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    loadCalendar(app, twa, userId, 'call', 60, currentMonth);
+  });
+
+  document.getElementById('btn-meeting').addEventListener('click', () => {
+    const currentMonth = new Date();
+    currentMonth.setDate(1);
+    loadCalendar(app, twa, userId, 'meeting', 120, currentMonth);
+  });
+}
+
+// ----------------------------------------------------
+// ЭКРАН 2: КАЛЕНДАРЬ
+// ----------------------------------------------------
+async function loadCalendar(app, twa, userId, type, durationMinutes, monthDate) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth() + 1;
+  const monthStr = `${year}-${month.toString().padStart(2, '0')}`;
+
+  const monthName = new Intl.DateTimeFormat('ru-RU', { month: 'long', year: 'numeric' }).format(monthDate);
+  const capitalizedMonthName = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
+  app.innerHTML = `
+    <div class="welcome-container" style="justify-content: flex-start; padding-top: 5vh;">
+      <div class="header animate-in" style="margin-bottom: 24px; width: 100%;">
+        <div class="header-row">
+          ${Object.keys(twa.initDataUnsafe || {}).length === 0 ? '<button class="back-btn" id="fallback-back">❮</button>' : ''}
+          <div>
+            <h1 style="margin: 0; padding: 0;">Свободные дни</h1>
+            <p class="subtitle" style="margin-top: 4px;">Услуга: ${type === 'call' ? 'Звонок' : 'Встреча'} (${formatDuration(durationMinutes)})</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="calendar-container animate-in delay-1" style="width: 100%; max-width: 400px;">
+        <div class="calendar-nav">
+          <button class="nav-btn" id="prev-month">❮</button>
+          <div class="calendar-title">${capitalizedMonthName}</div>
+          <button class="nav-btn" id="next-month">❯</button>
+        </div>
+        
+        <div class="calendar-weekdays">
+          <div>Пн</div><div>Вт</div><div>Ср</div><div>Чт</div><div>Пт</div><div>Сб</div><div>Вс</div>
+        </div>
+        
+        <div id="calendar-grid" class="calendar-grid">
+           <div class="loader-container"><div class="loader"></div></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (twa.BackButton) {
+    twa.BackButton.show();
+    twa.BackButton.onClick(() => {
+      renderServiceSelection(app, twa, userId);
+    });
+  }
+
+  const fallbackBackBtn = document.getElementById('fallback-back');
+  if (fallbackBackBtn) {
+    fallbackBackBtn.addEventListener('click', () => {
+      renderServiceSelection(app, twa, userId);
+    });
+  }
+
+  document.getElementById('prev-month').addEventListener('click', () => {
+    const prev = new Date(monthDate);
+    prev.setMonth(prev.getMonth() - 1);
+    loadCalendar(app, twa, userId, type, durationMinutes, prev);
+  });
+
+  document.getElementById('next-month').addEventListener('click', () => {
+    const next = new Date(monthDate);
+    next.setMonth(next.getMonth() + 1);
+    loadCalendar(app, twa, userId, type, durationMinutes, next);
+  });
+
+  try {
+    const response = await fetchSlots(userId, twa.initData, type, monthStr);
+    const slots = response.slots || []; // массив ISO строк
+
+    // Получаем длительность от бэкенда. Если нет, ставим fallback значения.
+    let currentDurationMinutes = response.duration;
+    if (!currentDurationMinutes) {
+      currentDurationMinutes = type === 'call' ? 60 : 120;
+    }
+
+    renderCalendarGrid(app, twa, userId, type, currentDurationMinutes, monthDate, slots);
+  } catch (err) {
+    document.getElementById('calendar-grid').innerHTML = `
+      <div class="error-view" style="grid-column: 1 / -1;">
+        <p style="color: #ff3b30; margin-bottom: 16px;">Ошибка загрузки.</p>
+        <button class="btn btn-secondary" id="btn-retry">Повторить</button>
+      </div>
+    `;
+    document.getElementById('btn-retry')?.addEventListener('click', () => {
+      loadCalendar(app, twa, userId, type, durationMinutes, monthDate);
+    });
+  }
+}
+
+function renderCalendarGrid(app, twa, userId, type, durationMinutes, monthDate, isoSlots) {
+  const grid = document.getElementById('calendar-grid');
+  grid.innerHTML = '';
+
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+
+  // Группируем слоты по датам (YYYY-MM-DD -> массив дат в виде ISO)
+  const slotsByDate = {};
+  isoSlots.forEach(isoStr => {
+    const d = new Date(isoStr);
+    // Берем дату локально так как календарь локальный
+    const dateKey = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+    if (!slotsByDate[dateKey]) slotsByDate[dateKey] = [];
+    slotsByDate[dateKey].push(isoStr);
+  });
+
+  // Логика отрисовки сетки месяца
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  // Определяем день недели 1-го числа (0 = Вс, 1 = Пн ... 6 = Сб). Приводим к формату (1 = Пн, 7 = Вс)
+  let firstDayDayOfWeek = firstDayOfMonth.getDay();
+  if (firstDayDayOfWeek === 0) firstDayDayOfWeek = 7;
+
+  // Пустые ячейки в начале
+  for (let i = 1; i < firstDayDayOfWeek; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'calendar-day empty';
+    grid.appendChild(empty);
+  }
+
+  // Дни месяца
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const currentDay = new Date(year, month, d);
+    const dateKey = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+    const daySlots = slotsByDate[dateKey] || [];
+
+    const dayEl = document.createElement('div');
+    dayEl.className = 'calendar-day';
+    dayEl.innerText = d;
+
+    if (currentDay < today) {
+      dayEl.classList.add('disabled');
+    } else if (daySlots.length > 0) {
+      dayEl.classList.add('has-slots');
+      dayEl.addEventListener('click', () => {
+        // Подсвечиваем активный день
+        document.querySelectorAll('.calendar-day').forEach(el => el.classList.remove('selected'));
+        dayEl.classList.add('selected');
+        // Открываем экран со слотами дня
+        renderDaySlots(app, twa, userId, type, durationMinutes, currentDay, daySlots);
+      });
+    } else {
+      dayEl.classList.add('disabled');
+    }
+
+    if (year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) {
+      dayEl.classList.add('today');
+    }
+
+    grid.appendChild(dayEl);
+  }
+}
+
+// ----------------------------------------------------
+// ЭКРАН 3: СПИСОК СЛОТОВ НА ВЫБРАННЫЙ ДЕНЬ
+// ----------------------------------------------------
+function renderDaySlots(app, twa, userId, type, durationMinutes, dayDate, daySlots) {
+  // Сортируем слоты по времени
+  daySlots.sort((a, b) => new Date(a) - new Date(b));
+
+  const formatter = new Intl.DateTimeFormat('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dayName = formatter.format(dayDate);
+
+  app.innerHTML = `
+    <div class="welcome-container" style="justify-content: flex-start; padding-top: 5vh;">
+      <div class="header animate-in" style="width: 100%;">
+        <div class="header-row">
+          ${Object.keys(twa.initDataUnsafe || {}).length === 0 ? '<button class="back-btn" id="fallback-back">❮</button>' : ''}
+          <div>
+             <h1 style="margin: 0; padding: 0;">Выберите время</h1>
+             <p class="subtitle" style="margin-top: 4px;">${dayName.charAt(0).toUpperCase() + dayName.slice(1)}</p>
+          </div>
+        </div>
+      </div>
+      
+      <div id="slots-container" class="slots-list animate-in delay-1" style="width: 100%; max-width: 400px;">
+        <!-- Слоты рендерятся тут -->
+      </div>
+    </div>
+  `;
+
+  if (twa.BackButton) {
+    twa.BackButton.show();
+    twa.BackButton.onClick(() => {
+      // Возвращаем в календарь этого же месяца
+      const monthStart = new Date(dayDate);
+      monthStart.setDate(1);
+      loadCalendar(app, twa, userId, type, durationMinutes, monthStart);
+    });
+  }
+
+  const fallbackBackBtn = document.getElementById('fallback-back');
+  if (fallbackBackBtn) {
+    fallbackBackBtn.addEventListener('click', () => {
+      const monthStart = new Date(dayDate);
+      monthStart.setDate(1);
+      loadCalendar(app, twa, userId, type, durationMinutes, monthStart);
+    });
+  }
+
+  const container = document.getElementById('slots-container');
+
+  container.innerHTML = daySlots.map((isoString, index) => {
+    const d = new Date(isoString);
+    const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    const delayClass = `delay-${Math.min(index + 1, 4)}`;
+    return `
+      <div class="card slot-card animate-in ${delayClass}" data-iso="${isoString}">
+        <div class="card-content">
+          <div class="card-title">${timeStr}</div>
+          <div class="card-subtitle">Длительность: ${formatDuration(durationMinutes)}</div>
+        </div>
+        <div class="radio-circle"></div>
+      </div>
+    `;
+  }).join('');
+
+  const slotCards = container.querySelectorAll('.slot-card');
+
+  slotCards.forEach(card => {
+    card.addEventListener('click', () => {
+      const selectedIso = card.dataset.iso;
+      // Переходим к вводу контакта
+      renderContactForm(app, twa, userId, type, durationMinutes, dayDate, selectedIso);
+    });
+  });
+}
+
+// ----------------------------------------------------
+// ЭКРАН 4: ФОРМА ДАННЫХ КЛИЕНТА
+// ----------------------------------------------------
+function renderContactForm(app, twa, userId, type, durationMinutes, dayDate, selectedIso) {
+  const d = new Date(selectedIso);
+  const timeStr = d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  const dayStr = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'long' }).format(d);
+
+  app.innerHTML = `
+    <div class="header animate-in">
+      <div class="header-row">
+        ${Object.keys(twa.initDataUnsafe || {}).length === 0 ? '<button class="back-btn" id="fallback-back">❮</button>' : ''}
+        <div>
+          <h1 style="margin: 0; padding: 0;">Ваши данные</h1>
+          <p class="subtitle" style="margin-top: 4px;">Запись на ${dayStr} в ${timeStr}</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-container animate-in delay-1">
+      <div class="input-group">
+        <label for="client-name">Имя и Фамилия</label>
+        <input type="text" id="client-name" class="input-field" placeholder="Иван Иванов" autocomplete="name">
+      </div>
+      
+      <div class="input-group">
+        <label for="client-phone">Контактный телефон</label>
+        <input type="tel" id="client-phone" class="input-field" placeholder="+7 (999) 000-00-00" autocomplete="tel">
+      </div>
+      
+      <!-- Fallback кнопка для обычного браузера -->
+      <button id="fallback-submit" class="btn" style="margin-top: 24px; display: none;">ПОДТВЕРДИТЬ ЗАПИСЬ</button>
+    </div>
+  `;
+
+  if (twa.BackButton) {
+    twa.BackButton.show();
+    twa.BackButton.onClick(() => {
+      // Возвращаем к списку слотов этого же дня.
+      const monthStart = new Date(dayDate);
+      monthStart.setDate(1);
+      loadCalendar(app, twa, userId, type, durationMinutes, monthStart);
+    });
+  }
+
+  const fallbackBackBtn = document.getElementById('fallback-back');
+  if (fallbackBackBtn) {
+    fallbackBackBtn.addEventListener('click', () => {
+      const monthStart = new Date(dayDate);
+      monthStart.setDate(1);
+      loadCalendar(app, twa, userId, type, durationMinutes, monthStart);
+    });
+  }
+
+  const nameInput = document.getElementById('client-name');
+  const phoneInput = document.getElementById('client-phone');
+  const fallbackBtn = document.getElementById('fallback-submit');
+
+  const validateForm = () => {
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+
+    if (name.length >= 2 && phone.length >= 6) {
+      if (twa.MainButton && typeof twa.MainButton.show === 'function' && Object.keys(twa.initDataUnsafe || {}).length > 0) {
+        // Мы в Telegram
+        if (!twa.MainButton.isVisible) {
+          twa.MainButton.text = 'ПОДТВЕРДИТЬ ЗАПИСЬ';
+          twa.MainButton.color = twa.themeParams?.button_color || '#2481cc';
+          twa.MainButton.textColor = twa.themeParams?.button_text_color || '#ffffff';
+          twa.MainButton.show();
+        }
+        twa.MainButton.enable();
+      } else {
+        // Мы в браузере (Localtunnel)
+        fallbackBtn.style.display = 'block';
+      }
+    } else {
+      if (twa.MainButton && typeof twa.MainButton.hide === 'function') {
+        twa.MainButton.hide();
+      }
+      fallbackBtn.style.display = 'none';
+    }
+  };
+
+  nameInput.addEventListener('input', validateForm);
+  phoneInput.addEventListener('input', validateForm);
+
+  // Отписываемся от старого обработчика (если был)
+  if (twa.MainButton && typeof twa.MainButton.offClick === 'function') {
+    twa.MainButton.offClick(onConfirmClick);
+    twa.MainButton.onClick(onConfirmClick);
+  }
+
+  fallbackBtn.addEventListener('click', onConfirmClick);
+
+  async function onConfirmClick() {
+    const name = nameInput.value.trim();
+    const phone = phoneInput.value.trim();
+
+    if (name.length < 2 || phone.length < 6) return;
+
+    if (twa.MainButton && typeof twa.MainButton.showProgress === 'function') {
+      twa.MainButton.showProgress();
+      twa.MainButton.disable();
+    } else {
+      fallbackBtn.disabled = true;
+      fallbackBtn.innerText = 'Секунду...';
+    }
+
+    try {
+      await bookSlot(userId, type, selectedIso, { name, phone });
+
+      // Успех
+      if (twa.MainButton && typeof twa.MainButton.hideProgress === 'function') {
+        twa.MainButton.hideProgress();
+        twa.MainButton.hide();
+        if (twa.BackButton) twa.BackButton.hide();
+        twa.MainButton.offClick(onConfirmClick);
+      }
+
+      fallbackBtn.style.display = 'none';
+
+      showSuccess(app, twa, dayStr, timeStr);
+    } catch (e) {
+      if (twa.MainButton && typeof twa.MainButton.hideProgress === 'function') {
+        twa.MainButton.hideProgress();
+        twa.MainButton.enable();
+      } else {
+        fallbackBtn.disabled = false;
+        fallbackBtn.innerText = 'ПОДТВЕРДИТЬ ЗАПИСЬ';
+      }
+
+      if (typeof twa.showAlert === 'function') {
+        twa.showAlert("Произошла ошибка при бронировании.");
+      } else {
+        alert("Произошла ошибка при бронировании. Пожалуйста, попробуйте снова.");
+      }
+    }
+  }
+
+  twa.MainButton.onClick(onConfirmClick);
+}
+
+function showSuccess(app, twa, dayStr, timeStr) {
+  app.innerHTML = `
+    <div class="success-view">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="12" fill="var(--button-color)" fill-opacity="0.2"/>
+          <path d="M16.5 8L10.5 14L7.5 11" stroke="var(--button-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>Запись подтверждена!</h1>
+      <p class="subtitle" style="margin-bottom: 32px;">Ждем вас ${dayStr} в ${timeStr}. Вы получите уведомление в боте с деталями.</p>
+      
+      <button id="btn-close-app" class="btn">ВЫЙТИ</button>
+    </div>
+  `;
+
+  document.getElementById('btn-close-app').addEventListener('click', () => {
+    if (typeof twa.close === 'function') {
+      twa.close();
+    } else {
+      try { window.close(); } catch (e) { }
+    }
+  });
+}

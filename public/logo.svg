@@ -1,0 +1,22 @@
+<svg width="600" height="200" viewBox="0 0 600 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Фон (сделаем прозрачным, чтобы красиво легло на фон приложения) -->
+  <rect width="600" height="200" fill="transparent"/>
+  
+  <!-- Эмблема (Круг с домом и узором) -->
+  <g transform="translate(40, 40)">
+    <circle cx="60" cy="60" r="58" stroke="#735147" stroke-width="2"/>
+    <!-- Узор в виде ветвей/корней -->
+    <path d="M60 2 L60 40 M60 80 L60 118 M2 60 L40 60 M80 60 L118 60" stroke="#735147" stroke-width="1.5"/>
+    <path d="M20 20 L45 45 M75 75 L100 100 M20 100 L45 75 M75 45 L100 20" stroke="#735147" stroke-width="1.5"/>
+    <path d="M40 10 Q20 30 10 60 Q20 90 40 110 M80 10 Q100 30 110 60 Q100 90 80 110" stroke="#735147" stroke-width="1" fill="none"/>
+    <path d="M10 40 Q30 20 60 10 Q90 20 110 40 M10 80 Q30 100 60 110 Q90 100 110 80" stroke="#735147" stroke-width="1" fill="none"/>
+    
+    <!-- Силуэт дома в центре -->
+    <rect x="42" y="55" width="36" height="30" fill="transparent" stroke="#735147" stroke-width="2"/>
+    <path d="M40 55 L60 38 L80 55" stroke="#735147" stroke-width="2" fill="transparent"/>
+  </g>
+
+  <!-- Текст (Sienkiewicz Dom) -->
+  <text x="180" y="85" font-family="Serif, 'Times New Roman'" font-size="64" fill="#735147" font-weight="400">Sienkiewicz</text>
+  <text x="180" y="160" font-family="Serif, 'Times New Roman'" font-size="64" fill="#735147" font-weight="600">Dom</text>
+</svg>
