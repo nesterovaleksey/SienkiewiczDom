@@ -22,17 +22,24 @@ export async function fetchSlots(telegramId, initData, type, monthStr) {
         });
 
         if (!res.ok) {
-            const errorText = await res.text();
-            alert(`Ошибка от сервера (status ${res.status}): ${errorText}`);
-            throw new Error(`Network error: ${res.status}`);
+            const err = new Error(`Network error: ${res.status}`);
+            err.code = 'NETWORK_ERROR';
+            throw err;
         }
 
         const data = await res.json();
-        return data; // Возвращаем то что пришло (например { "slots": [...] })
+
+        // Если n8n вернул ошибку стороннего сервиса — пробрасываем наверх
+        if (data.success === false && data.error_code) {
+            const err = new Error(data.error_code);
+            err.code = data.error_code;
+            throw err;
+        }
+
+        return data;
     } catch (err) {
-        alert("Детальная ошибка: " + err.message);
-        console.warn("Ошибка вызова n8n, используем мок данные для интерфейса", err);
-        return mockFetchSlots(monthStr);
+        console.error('fetchSlots error:', err.code || err.message);
+        throw err; // UI сам решит что показать
     }
 }
 

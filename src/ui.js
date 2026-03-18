@@ -167,9 +167,15 @@ async function loadCalendar(app, twa, userId, type, durationMinutes, monthDate) 
 
     renderCalendarGrid(app, twa, userId, type, currentDurationMinutes, monthDate, slots);
   } catch (err) {
+    const isTechnical = err.code === 'CALENDAR_API_FAILURE';
+    const errorMsg = isTechnical
+      ? 'К сожалению, возникли технические проблемы. Мы уже работаем над их устранением. Пожалуйста, попробуйте позже.'
+      : 'Не удалось загрузить расписание. Проверьте соединение и попробуйте снова.';
+    const errorColor = isTechnical ? '#f59e0b' : '#ff3b30';
+
     document.getElementById('calendar-grid').innerHTML = `
       <div class="error-view" style="grid-column: 1 / -1;">
-        <p style="color: #ff3b30; margin-bottom: 16px;">Ошибка загрузки.</p>
+        <p style="color: ${errorColor}; margin-bottom: 16px;">${errorMsg}</p>
         <button class="btn btn-secondary" id="btn-retry">Повторить</button>
       </div>
     `;
@@ -591,19 +597,25 @@ function renderRodoConsent(app, twa, userId, type, durationMinutes, dayDate, sel
       }
       fallbackBtn.style.display = 'none';
 
+      // Разбираем ответ от n8n
       let isSuccess = true;
+      let errorCode = null;
       try {
-        const respStr = typeof response === 'string' ? response : JSON.stringify(response);
-        const cleanResp = respStr.replace(/\s+/g, '').replace(/"/g, "'").toLowerCase();
-        if (cleanResp.includes("'success':false") || cleanResp.includes("'success':'false'")) {
+        const parsed = typeof response === 'object' ? response : JSON.parse(response);
+        if (parsed.success === false || parsed.success === 'false') {
           isSuccess = false;
+          errorCode = parsed.error_code || null;
         }
       } catch (err) {
         console.warn("Ошибка парсинга ответа n8n", err);
       }
 
       if (!isSuccess) {
-        showErrorSlotOccupied(app, twa, userId);
+        if (errorCode === 'CALENDAR_API_FAILURE') {
+          showErrorTechnical(app, twa, userId);
+        } else {
+          showErrorSlotOccupied(app, twa, userId);
+        }
       } else {
         showSuccess(app, twa, type, dayStr, timeStr);
       }
@@ -659,6 +671,31 @@ function showSuccess(app, twa, type, dayStr, timeStr) {
     } else {
       try { window.close(); } catch (e) { }
     }
+  });
+}
+
+function showErrorTechnical(app, twa, userId) {
+  app.innerHTML = `
+    <div class="success-view" style="padding-top: 100px;">
+      <div class="welcome-icon logo-fixed">
+        <img src="/logo.svg" alt="Sienkiewicz Dom" style="width: 100%; height: auto; display: block;" onerror="this.style.display='none'">
+      </div>
+      
+      <div class="success-icon" style="margin-bottom: 16px;">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 64px; height: 64px;">
+          <circle cx="12" cy="12" r="12" fill="#f59e0b" fill-opacity="0.2"/>
+          <path d="M12 7v6M12 17h.01" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 style="text-align: center;">Технические проблемы</h1>
+      <p class="subtitle" style="margin-bottom: 32px;">К сожалению, возникли технические проблемы. Мы уже работаем над их устранением. Пожалуйста, попробуйте позже.</p>
+      
+      <button id="btn-return-tech" class="btn">ВЕРНУТЬСЯ</button>
+    </div>
+  `;
+
+  document.getElementById('btn-return-tech').addEventListener('click', () => {
+    renderServiceSelection(app, twa, userId);
   });
 }
 
